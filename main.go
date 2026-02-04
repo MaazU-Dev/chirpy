@@ -16,8 +16,8 @@ func main() {
 	mux := http.NewServeMux()
 	var config apiConfig
 	mux.Handle("/app/", http.StripPrefix("/app/", config.middlewareMetricsInc(http.FileServer(http.Dir(rootFileDir)))))
-	mux.HandleFunc("GET /api/metrics", config.handlerMetrics)
-	mux.HandleFunc("POST /api/reset", config.handlerReset)
+	mux.HandleFunc("GET /admin/metrics", config.handlerMetrics)
+	mux.HandleFunc("POST /admin/reset", config.handlerReset)
 	mux.HandleFunc("GET /api/healthz", handlerReadiness)
 	s := &http.Server{
 		Addr:    ":" + port,
@@ -27,9 +27,16 @@ func main() {
 }
 
 func (cfg *apiConfig) handlerMetrics(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Add("Content-Type", "text/html")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(fmt.Sprintf("Hits: %d", cfg.fileserverHits.Load())))
+	w.Write([]byte(fmt.Sprintf(`
+	<html>
+ 	<body>
+    <h1>Welcome, Chirpy Admin</h1>
+    <p>Chirpy has been visited %d times!</p>
+  	</body>
+	</html>
+	`, cfg.fileserverHits.Load())))
 }
 
 func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
