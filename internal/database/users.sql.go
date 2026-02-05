@@ -33,7 +33,7 @@ func (q *Queries) CreateUser(ctx context.Context, email string) (User, error) {
 }
 
 const deleteALLUser = `-- name: DeleteALLUser :exec
-TRUNCATE TABLE users
+DELETE FROM users
 `
 
 func (q *Queries) DeleteALLUser(ctx context.Context) error {
