@@ -15,7 +15,7 @@ type User struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-func (cfg *apiConfig) handleUsers(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	type reqBody struct {
 		Email string `json:"email"`
 	}
