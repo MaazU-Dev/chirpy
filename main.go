@@ -16,6 +16,7 @@ import (
 type apiConfig struct {
 	fileserverHits atomic.Int32
 	dbQueries      *database.Queries
+	platform       string
 }
 
 func main() {
@@ -27,17 +28,24 @@ func main() {
 	}
 	defer db.Close()
 	dbQueries := database.New(db)
+	platform := os.Getenv("platform")
+	if platform == "" {
+		log.Fatal("PLATFORM must be set")
+	}
 	rootFileDir := "."
 	port := "8080"
 	mux := http.NewServeMux()
 	config := apiConfig{
-		dbQueries: dbQueries,
+		fileserverHits: atomic.Int32{},
+		dbQueries:      dbQueries,
+		platform:       platform,
 	}
 	mux.Handle("/app/", http.StripPrefix("/app/", config.middlewareMetricsInc(http.FileServer(http.Dir(rootFileDir)))))
 	mux.HandleFunc("GET /admin/metrics", config.handlerMetrics)
 	mux.HandleFunc("POST /admin/reset", config.handlerReset)
 	mux.HandleFunc("GET /api/healthz", handlerReadiness)
 	mux.HandleFunc("POST /api/validate_chirp", handleChirpValidation)
+	mux.HandleFunc("POST /api/users", config.handleUsers)
 	s := &http.Server{
 		Addr:    ":" + port,
 		Handler: mux,
