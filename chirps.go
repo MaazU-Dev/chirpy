@@ -65,7 +65,7 @@ type Chirp struct {
 	UserID    uuid.UUID `json:"user_id"`
 }
 
-func (cfg *apiConfig) handleChirps(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) handleChirpsCreate(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Body   string `json:"body"`
 		UserId string `json:"user_id"`
@@ -77,6 +77,7 @@ func (cfg *apiConfig) handleChirps(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&reqBody); err != nil {
 		respondWithError(w, http.StatusBadRequest, "Something went wrong", err)
+		return
 	}
 
 	const maxChirpLength = 140
@@ -97,7 +98,7 @@ func (cfg *apiConfig) handleChirps(w http.ResponseWriter, r *http.Request) {
 		UserID: parsedUuid,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Unable to create UUI", err)
+		respondWithError(w, http.StatusBadRequest, "Unable to create UUID", err)
 		return
 	}
 
@@ -110,4 +111,25 @@ func (cfg *apiConfig) handleChirps(w http.ResponseWriter, r *http.Request) {
 			UpdatedAt: chirp.UpdatedAt,
 		},
 	})
+}
+
+func (cfg *apiConfig) handleChirpsRetrieve(w http.ResponseWriter, r *http.Request) {
+	data, err := cfg.dbQueries.GetAllChirps(r.Context())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Unable to get all chirps", err)
+		return
+	}
+	listChirps := make([]Chirp, len(data))
+	for i, val := range data {
+		listChirps[i] = Chirp{
+			ID:        val.ID,
+			UserID:    val.UserID,
+			Body:      val.Body,
+			CreatedAt: val.CreatedAt,
+			UpdatedAt: val.UpdatedAt,
+		}
+	}
+	respondWithJSON(w, http.StatusOK,
+		listChirps,
+	)
 }
