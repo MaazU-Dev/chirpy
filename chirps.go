@@ -133,3 +133,35 @@ func (cfg *apiConfig) handleChirpsRetrieve(w http.ResponseWriter, r *http.Reques
 		listChirps,
 	)
 }
+
+func (cfg *apiConfig) handleChirpsRetrieveByID(w http.ResponseWriter, r *http.Request) {
+	type resBody struct {
+		Chirp
+	}
+	id := r.PathValue("id")
+	if id == "" {
+		respondWithError(w, http.StatusBadRequest, "Id is required", nil)
+		return
+	}
+	parsedId, err := uuid.Parse(id)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Id is not in correct format", err)
+		return
+	}
+	data, err := cfg.dbQueries.GetChirpsByID(r.Context(), parsedId)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, "Unable to get all chirps", err)
+		return
+	}
+	respondWithJSON(w, http.StatusOK,
+		resBody{
+			Chirp: Chirp{
+				ID:        data.ID,
+				UserID:    data.UserID,
+				Body:      data.Body,
+				CreatedAt: data.CreatedAt,
+				UpdatedAt: data.UpdatedAt,
+			},
+		},
+	)
+}
