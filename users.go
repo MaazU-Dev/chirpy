@@ -59,23 +59,19 @@ func (cfg *apiConfig) handleUsersCreate(w http.ResponseWriter, r *http.Request) 
 
 func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 	type reqBody struct {
-		Email       string `json:"email"`
-		Password    string `json:"password"`
-		ExpireInSec int    `json:"expires_in_seconds"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
 	}
 	type resBody struct {
 		User
-		Token string `json:"token"`
+		Token        string `json:"token"`
+		RefreshToken string `json:"refresh_token"`
 	}
 	var request reqBody
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&request); err != nil {
 		respondWithError(w, http.StatusBadRequest, "Something went wrong", err)
 		return
-	}
-
-	if request.ExpireInSec <= 0 || request.ExpireInSec > 3600 {
-		request.ExpireInSec = 3600
 	}
 
 	user, err := cfg.dbQueries.GetUser(r.Context(), request.Email)
@@ -90,9 +86,25 @@ func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jwt, err := auth.MakeJWT(user.ID, cfg.jwtSecret, time.Duration(time.Second*time.Duration(request.ExpireInSec)))
+	jwt, err := auth.MakeJWT(user.ID, cfg.jwtSecret, time.Hour)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Unable to create Auth Token", err)
+		return
+	}
+
+	refreshToken, err := auth.MakeRefreshToken()
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Unable to create Refresh Token", err)
+		return
+	}
+
+	_, err = cfg.dbQueries.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
+		Token:     refreshToken,
+		ExpiresAt: time.Now().UTC().Add(time.Hour * 24 * 30),
+		UserID:    user.ID,
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Unable to create Refresh Token in db", err)
 		return
 	}
 
@@ -103,7 +115,8 @@ func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 			CreatedAt: user.CreatedAt,
 			UpdatedAt: user.UpdatedAt,
 		},
-		Token: jwt,
+		Token:        jwt,
+		RefreshToken: refreshToken,
 	}
 	respondWithJSON(w, http.StatusOK, res)
 }

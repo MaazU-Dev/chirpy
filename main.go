@@ -52,6 +52,8 @@ func main() {
 	mux.HandleFunc("GET /api/healthz", handlerReadiness)
 	mux.HandleFunc("POST /api/users", config.handleUsersCreate)
 	mux.HandleFunc("POST /api/login", config.handleLogin)
+	mux.HandleFunc("POST /api/refresh", config.handleRefresh)
+	mux.HandleFunc("POST /api/revoke", config.handleRevoke)
 	mux.HandleFunc("POST /api/chirps", config.handleChirpsCreate)
 	mux.HandleFunc("GET /api/chirps", config.handleChirpsRetrieve)
 	mux.HandleFunc("GET /api/chirps/{id}", config.handleChirpsRetrieveByID)
