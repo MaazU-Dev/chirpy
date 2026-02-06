@@ -17,6 +17,7 @@ type apiConfig struct {
 	fileserverHits atomic.Int32
 	dbQueries      *database.Queries
 	platform       string
+	jwtSecret      string
 }
 
 func main() {
@@ -32,6 +33,10 @@ func main() {
 	if platform == "" {
 		log.Fatal("PLATFORM must be set")
 	}
+	jwtSecret := os.Getenv("JWT_SECRET_TOKEN")
+	if platform == "" {
+		log.Fatal("Please set JWT Secret Token")
+	}
 	rootFileDir := "."
 	port := "8080"
 	mux := http.NewServeMux()
@@ -39,6 +44,7 @@ func main() {
 		fileserverHits: atomic.Int32{},
 		dbQueries:      dbQueries,
 		platform:       platform,
+		jwtSecret:      jwtSecret,
 	}
 	mux.Handle("/app/", http.StripPrefix("/app/", config.middlewareMetricsInc(http.FileServer(http.Dir(rootFileDir)))))
 	mux.HandleFunc("GET /admin/metrics", config.handlerMetrics)

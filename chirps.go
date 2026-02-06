@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/MaazU-Dev/chirpy/internal/auth"
 	"github.com/MaazU-Dev/chirpy/internal/database"
 	"github.com/google/uuid"
 )
@@ -67,8 +68,7 @@ type Chirp struct {
 
 func (cfg *apiConfig) handleChirpsCreate(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
-		Body   string `json:"body"`
-		UserId string `json:"user_id"`
+		Body string `json:"body"`
 	}
 	type resBody struct {
 		Chirp
@@ -87,15 +87,22 @@ func (cfg *apiConfig) handleChirpsCreate(w http.ResponseWriter, r *http.Request)
 	}
 
 	cleanedBody := profaneFilter(reqBody.Body)
-	parsedUuid, err := uuid.Parse(reqBody.UserId)
+
+	jwt, err := auth.GetBearerToken(r.Header)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Provide correct user id", err)
+		respondWithError(w, http.StatusUnauthorized, "Unauthorized: Unable to get bearer token", err)
+		return
+	}
+
+	userId, err := auth.ValidateJWT(jwt, cfg.jwtSecret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Unauthorized: Unable to validate JWT", err)
 		return
 	}
 
 	chirp, err := cfg.dbQueries.CreateChirp(r.Context(), database.CreateChirpParams{
 		Body:   cleanedBody,
-		UserID: parsedUuid,
+		UserID: userId,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Unable to create UUID", err)

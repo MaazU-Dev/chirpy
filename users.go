@@ -59,17 +59,23 @@ func (cfg *apiConfig) handleUsersCreate(w http.ResponseWriter, r *http.Request) 
 
 func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 	type reqBody struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		Email       string `json:"email"`
+		Password    string `json:"password"`
+		ExpireInSec int    `json:"expires_in_seconds"`
 	}
 	type resBody struct {
 		User
+		Token string `json:"token"`
 	}
 	var request reqBody
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&request); err != nil {
 		respondWithError(w, http.StatusBadRequest, "Something went wrong", err)
 		return
+	}
+
+	if request.ExpireInSec <= 0 || request.ExpireInSec > 3600 {
+		request.ExpireInSec = 3600
 	}
 
 	user, err := cfg.dbQueries.GetUser(r.Context(), request.Email)
@@ -83,6 +89,13 @@ func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusUnauthorized, "Password does not match", err)
 		return
 	}
+
+	jwt, err := auth.MakeJWT(user.ID, cfg.jwtSecret, time.Duration(time.Second*time.Duration(request.ExpireInSec)))
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Unable to create Auth Token", err)
+		return
+	}
+
 	res := resBody{
 		User: User{
 			ID:        user.ID,
@@ -90,6 +103,7 @@ func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 			CreatedAt: user.CreatedAt,
 			UpdatedAt: user.UpdatedAt,
 		},
+		Token: jwt,
 	}
 	respondWithJSON(w, http.StatusOK, res)
 }
