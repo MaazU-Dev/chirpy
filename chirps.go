@@ -174,6 +174,16 @@ func (cfg *apiConfig) handleChirpsRetrieveByID(w http.ResponseWriter, r *http.Re
 }
 
 func (cfg *apiConfig) HandleChirpsDeleteByID(w http.ResponseWriter, r *http.Request) {
+	jwt, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Unauthorized: Unable to get bearer token", err)
+		return
+	}
+	userId, err := auth.ValidateJWT(jwt, cfg.jwtSecret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Unauthorized: Unable to validate JWT", err)
+		return
+	}
 	id := r.PathValue("id")
 	if id == "" {
 		respondWithError(w, http.StatusBadRequest, "Id is required", nil)
@@ -182,6 +192,15 @@ func (cfg *apiConfig) HandleChirpsDeleteByID(w http.ResponseWriter, r *http.Requ
 	parsedId, err := uuid.Parse(id)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Id is not in correct format", err)
+		return
+	}
+	chirp, err := cfg.dbQueries.GetChirpsByID(r.Context(), parsedId)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, "Unable to get chirp", err)
+		return
+	}
+	if chirp.UserID != userId {
+		respondWithError(w, http.StatusForbidden, "Unauthorized: You are not the owner of this chirp", nil)
 		return
 	}
 	err = cfg.dbQueries.DeleteChirpsByID(r.Context(), parsedId)
