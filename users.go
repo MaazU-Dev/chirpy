@@ -120,3 +120,53 @@ func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	respondWithJSON(w, http.StatusOK, res)
 }
+
+func (cfg *apiConfig) handleUsersUpdate(w http.ResponseWriter, r *http.Request) {
+	type reqBody struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	type resBody struct {
+		User
+	}
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "You are not authorized", err)
+		return
+	}
+	_, err = auth.ValidateJWT(token, cfg.jwtSecret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "You are not authorized", err)
+		return
+	}
+	/// Fetch the user record(Combinde both queries and use a transaction, SHOULD WE?) from the user ID received from the JWT
+	// Run validation on email and password
+	// Email should be same, password should not be same
+	var request reqBody
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&request); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Provide email or password", err)
+		return
+	}
+	hash, err := auth.HashPassword(request.Password)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Unable to create hash", err)
+		return
+	}
+	updatedUser, err := cfg.dbQueries.UpdateUser(r.Context(), database.UpdateUserParams{
+		Email:          request.Email,
+		HashedPassword: hash,
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Unable to update user", err)
+		return
+	}
+	respondWithJSON(w, http.StatusOK, resBody{
+		User: User{
+			ID:        updatedUser.ID,
+			Email:     updatedUser.Email,
+			CreatedAt: updatedUser.CreatedAt,
+			UpdatedAt: updatedUser.UpdatedAt,
+		},
+	})
+}
