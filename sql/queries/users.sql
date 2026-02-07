@@ -21,3 +21,8 @@ UPDATE users
 SET hashed_password = $1
 WHERE email = $2
 RETURNING *;
+
+-- name: UpdateUserToChirpyRed :exec
+UPDATE users
+SET is_chirpy_red = $1
+WHERE id = $2;
