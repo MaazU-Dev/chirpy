@@ -121,20 +121,33 @@ func (cfg *apiConfig) handleChirpsCreate(w http.ResponseWriter, r *http.Request)
 }
 
 func (cfg *apiConfig) handleChirpsRetrieve(w http.ResponseWriter, r *http.Request) {
+	authorId := uuid.Nil
+	authorIdString := r.URL.Query().Get("author_id")
+	var err error
+	if authorIdString != "" {
+		authorId, err = uuid.Parse(authorIdString)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, "Author ID is not in correct format", err)
+			return
+		}
+	}
 	data, err := cfg.dbQueries.GetAllChirps(r.Context())
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Unable to get all chirps", err)
 		return
 	}
-	listChirps := make([]Chirp, len(data))
-	for i, val := range data {
-		listChirps[i] = Chirp{
+	listChirps := []Chirp{}
+	for _, val := range data {
+		if authorId != uuid.Nil && authorId != val.UserID {
+			continue
+		}
+		listChirps = append(listChirps, Chirp{
 			ID:        val.ID,
 			UserID:    val.UserID,
 			Body:      val.Body,
 			CreatedAt: val.CreatedAt,
 			UpdatedAt: val.UpdatedAt,
-		}
+		})
 	}
 	respondWithJSON(w, http.StatusOK,
 		listChirps,
