@@ -58,6 +58,7 @@ func main() {
 	mux.HandleFunc("POST /api/chirps", config.handleChirpsCreate)
 	mux.HandleFunc("GET /api/chirps", config.handleChirpsRetrieve)
 	mux.HandleFunc("GET /api/chirps/{id}", config.handleChirpsRetrieveByID)
+	mux.HandleFunc("DELETE /api/chirps/{id}", config.HandleChirpsDeleteByID)
 	s := &http.Server{
 		Addr:    ":" + port,
 		Handler: mux,

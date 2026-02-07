@@ -172,3 +172,22 @@ func (cfg *apiConfig) handleChirpsRetrieveByID(w http.ResponseWriter, r *http.Re
 		},
 	)
 }
+
+func (cfg *apiConfig) HandleChirpsDeleteByID(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		respondWithError(w, http.StatusBadRequest, "Id is required", nil)
+		return
+	}
+	parsedId, err := uuid.Parse(id)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Id is not in correct format", err)
+		return
+	}
+	err = cfg.dbQueries.DeleteChirpsByID(r.Context(), parsedId)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, "Unable to found the chirp", err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
