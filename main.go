@@ -18,6 +18,7 @@ type apiConfig struct {
 	dbQueries      *database.Queries
 	platform       string
 	jwtSecret      string
+	polkaApiKey    string
 }
 
 func main() {
@@ -37,6 +38,10 @@ func main() {
 	if platform == "" {
 		log.Fatal("Please set JWT Secret Token")
 	}
+	polkaApiKey := os.Getenv("POLKA_API_KEY")
+	if polkaApiKey == "" {
+		log.Fatal("Please set JWT Secret Token")
+	}
 	rootFileDir := "."
 	port := "8080"
 	mux := http.NewServeMux()
@@ -45,6 +50,7 @@ func main() {
 		dbQueries:      dbQueries,
 		platform:       platform,
 		jwtSecret:      jwtSecret,
+		polkaApiKey:    polkaApiKey,
 	}
 	mux.Handle("/app/", http.StripPrefix("/app/", config.middlewareMetricsInc(http.FileServer(http.Dir(rootFileDir)))))
 	mux.HandleFunc("GET /admin/metrics", config.handlerMetrics)

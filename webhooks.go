@@ -4,11 +4,21 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/MaazU-Dev/chirpy/internal/auth"
 	"github.com/MaazU-Dev/chirpy/internal/database"
 	"github.com/google/uuid"
 )
 
 func (cfg *apiConfig) handlePolkaWebhook(w http.ResponseWriter, r *http.Request) {
+	key, err := auth.GetAPIKey(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "API Key not provided", err)
+		return
+	}
+	if key != cfg.polkaApiKey {
+		respondWithError(w, http.StatusUnauthorized, "Incorrect API Key", err)
+		return
+	}
 	type data struct {
 		UserId string `json:"user_id"`
 	}

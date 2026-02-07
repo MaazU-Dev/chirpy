@@ -82,6 +82,9 @@ func GetBearerToken(headers http.Header) (string, error) {
 		return "", errors.New("You are not authenticated")
 	}
 	authToken := strings.Split(authHeader, " ")
+	if len(authToken) < 2 || authToken[0] != "Bearer" {
+		return "", errors.New("Invalid Bearer token format")
+	}
 	return authToken[1], nil
 }
 
@@ -91,4 +94,16 @@ func MakeRefreshToken() (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(bytes), nil
+}
+
+func GetAPIKey(headers http.Header) (string, error) {
+	authHeader := headers.Get("Authorization")
+	if authHeader == "" {
+		return "", errors.New("API Key not provided")
+	}
+	authToken := strings.Split(authHeader, " ")
+	if len(authToken) < 2 || authToken[0] != "ApiKey" {
+		return "", errors.New("Invalid API Key format")
+	}
+	return authToken[1], nil
 }
